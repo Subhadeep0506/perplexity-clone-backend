@@ -1,25 +1,26 @@
-import base64
-from datetime import date
-from sqlalchemy import ForeignKey, String, Enum, Date
+from sqlalchemy import ForeignKey, String
+from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from database.database import Base, TimestampMixin
-from models.enums import FileType
+from ..database.database import Base, TimestampMixin
 
 
 class Profile(Base, TimestampMixin):
-    """SQLAlchemy model for the case_records table."""
+    """SQLAlchemy model for user profile information."""
 
     __tablename__ = "profile"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False, index=True)
-    
-    phone: Mapped[str] = mapped_column(String(13), nullable=True)
-    email: Mapped[str] = mapped_column(String(40), nullable=False)
-    password: Mapped[str] = mapped_column(String(20), nullable=False)
-    phone: Mapped[str] = mapped_column(String(13), nullable=True)
-    date_created: Mapped[date] = mapped_column(Date, nullable=False)
-    date_updated: Mapped[date] = mapped_column(Date, nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("user.id"), nullable=False, index=True
+    )
+    phone: Mapped[str | None] = mapped_column(String(13), nullable=True)
+    avatar: Mapped[str | None] = mapped_column(String, nullable=True)
+    bio: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    if TYPE_CHECKING:
+        from .user import User  # pragma: no cover
+
+    user: Mapped["User"] = relationship("User", back_populates="profile")
 
     def __repr__(self) -> str:
-        return f"CaseRecord(id={self.id}, file_name={self.file_name}, patient_id={self.patient_id})"
+        return f"Profile(id={self.id}, user_id={self.user_id}, avatar={self.avatar}, bio={self.bio})"

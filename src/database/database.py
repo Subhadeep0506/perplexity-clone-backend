@@ -1,8 +1,3 @@
-"""
-Database configuration and session management.
-Includes async engine creation, session pooling, and health checks.
-"""
-
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -43,6 +38,11 @@ class TimestampMixin:
         server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
+class DatabaseConnectionError(Exception):
+    """Raised when the DB connection fails (e.g. psycopg2 OperationalError).
+
+    Routes can catch this and return 503 / log as needed.
+    """
 
 @asynccontextmanager
 async def get_session() -> AsyncIterator[AsyncSession]:
