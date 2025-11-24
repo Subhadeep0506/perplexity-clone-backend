@@ -32,6 +32,11 @@ class LLMProvider(Enum):
     ANTHROPIC = "anthropic"
 
 
+class EmbeddingProvider(Enum):
+    HUGGINGFACE_LOCAL = "huggingface_local"
+    HUGGINGFACE_ENDPOINT = "huggingface_endpoint"
+
+
 class SourceType(Enum):
     WEB = "web"
     FILE = "file"
