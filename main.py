@@ -17,6 +17,8 @@ from typing import Optional
 from src.routers.auth import router
 from src.routers.profile import router as profile_router
 from src.routers.user_settings import router as user_settings_router
+from src.routers.service_catalog import router as service_catalog_router
+from src.routers.admin import router as admin_router
 
 from src.models import (
     user,
@@ -29,6 +31,8 @@ from src.models import (
     user_settings,
     model_memory,
     login_session,
+    service_catalog,
+    user_service_credential,
 )
 
 
@@ -100,11 +104,15 @@ logfire.instrument_requests()
 logfire.instrument_system_metrics(base="full")
 
 
-app.include_router(router, prefix="api/v1/auth", tags=["Auth"])
-app.include_router(profile_router, prefix="api/v1/profile", tags=["Profile"])
+app.include_router(router, prefix="/api/v1/auth", tags=["Auth"])
+app.include_router(profile_router, prefix="/api/v1/profile", tags=["Profile"])
 app.include_router(
-    user_settings_router, prefix="api/v1/user-settings", tags=["User Settings"]
+    user_settings_router, prefix="/api/v1/user-settings", tags=["User Settings"]
 )
+app.include_router(
+    service_catalog_router, prefix="/api/v1/service-catalog", tags=["Service Catalog"]
+)
+app.include_router(admin_router, prefix="/admin", tags=["Admin"])
 
 
 @app.get("/")

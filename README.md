@@ -108,6 +108,36 @@ Below are the core tables added for the Perplexity-clone application, their purp
 	- `content` (text): detailed memory content extracted or confirmed.
 	- `created_at`, `updated_at` (timestamps)
 
+### Service catalog and per-user credentials
+
+This project now includes an admin-managed service catalog and per-user credential storage to manage external providers (LLMs, embeddings, web search, and web scrapers).
+
+- **ServiceCatalog**: Admin-managed catalog of available external services. Each entry represents a provider and category (for example, `llm` or `embedding`).
+	- `id` (int, PK)
+	- `name` (varchar(120)) — display name (e.g., "OpenAI GPT-4").
+	- `slug` (varchar(80), unique) — short identifier (e.g., `openai-gpt4`).
+	- `category` (varchar(30)) — `llm`, `embedding`, `web_search`, `web_scraper`, etc.
+	- `provider` (varchar(60)) — provider code used by factories.
+	- `default_config` (JSON, nullable) — provider defaults such as model name.
+	- `is_active` (boolean) — whether the provider is enabled.
+
+- **UserServiceCredential**: Per-user credentials that link a `User` to a `ServiceCatalog` entry.
+	- `id` (int, PK)
+	- `user_id` (FK → `user.id`) — `ondelete=CASCADE`
+	- `service_id` (FK → `service_catalog.id`) — `ondelete=CASCADE`
+	- `api_key` (text, nullable) — user-provided API key (treat as secret).
+	- `config` (JSON, nullable) — optional per-user configuration overrides.
+	- `is_default` (boolean) — mark a credential as the user's default for that provider.
+
+Notes:
+- Existing provider-specific model files (e.g., `api_service.py`, provider-specific `llm.py`, `embedding.py`) have been removed in favor of the catalog + credentials model. If you had keys stored in `api_service` previously, migrate them into `UserServiceCredential` rows.
+- Factories (in `src/services/.../factory.py`) should use `ServiceCatalog.provider` + a `UserServiceCredential` to instantiate provider clients at runtime.
+
+Migration suggestion:
+- Add `ServiceCatalog` entries for the providers you want to support.
+- Run a one-off script or Alembic migration to copy non-null API keys from any old per-provider columns (if present) into `UserServiceCredential` rows for each user.
+- Remove legacy columns from the database once migration is verified.
+
 Notes and implementation choices:
 - The current implementation uses integer autoincrement primary keys (`id`) to keep changes minimal. If you prefer UUIDs for PKs (as in the original spec), I can convert the models to use UUID columns and update FKs accordingly (requires migrations).
 - All models rely on `TimestampMixin` from `src/database/database.py` which sets `created_at` and `updated_at` using SQL functions.
@@ -332,3 +362,32 @@ uv run fastapi run
 | Content Extraction         | Newspaper3k library, Readability-lxml for article text extraction     |
 | LLM for Response Generation| OpenAI GPT-4/3 free trial credits, Hugging Face Inference API (free for limited use), local open-source LLMs like GPT4All or Vicuna |
 | Prompt Construction & Orchestration | Custom scripting in Python or FastAPI for combining inputs/responses  |
+
+---
+
+# Admin
+
+This project includes an admin dashboard for managing users, services and sessions. The admin UI uses HTMX + Tailwind and is available under `/admin` routes.
+
+Quick start:
+
+```bash
+# Create an admin user
+uv run python scripts/create_admin.py
+
+# Start the app
+uv run fastapi dev main.py
+```
+
+Open: `http://localhost:8000/admin/login`
+
+Features:
+- Admin login/logout
+- Dashboard with statistics
+- Service catalog CRUD (LLM, embedding, web search, web scraper)
+- User management
+- Session monitoring
+
+Security notes: use HTTPS, secure cookies, JWT verification for production, and rate limiting on login routes.
+
+For full admin setup and usage examples, see `ADMIN_README.md` and `ADMIN_SETUP.md` in the repository root.

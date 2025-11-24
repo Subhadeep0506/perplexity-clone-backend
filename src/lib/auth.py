@@ -8,7 +8,8 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
-from ..database.database import session_pool
+from sqlalchemy.exc import SQLAlchemyError, DBAPIError
+from ..database.database import session_pool, DatabaseConnectionError
 from ..models.user import User
 from ..models.profile import Profile
 from ..models.login_session import LoginSession
@@ -172,27 +173,33 @@ async def get_current_user(
         raise credentials_exception
 
     # Verify token is active in login_session table
-    async with session_pool() as session:
-        session_result = await session.execute(
-            select(LoginSession)
-            .filter_by(
-                user_id=int(user_id),
-                access_token=credentials.credentials,
-                is_active=True,
+    try:
+        async with session_pool() as session:
+            session_result = await session.execute(
+                select(LoginSession)
+                .filter_by(
+                    user_id=int(user_id),
+                    access_token=credentials.credentials,
+                    is_active=True,
+                )
+                .order_by(desc(LoginSession.created_at))
             )
-            .order_by(desc(LoginSession.created_at))
-        )
-        session_record = session_result.scalar_one_or_none()
+            session_record = session_result.scalar_one_or_none()
 
-        if not session_record:
-            SingletonLogger().get_logger().error(
-                f"Token not found in login_session or inactive for user {user_id}"
-            )
-            raise HTTPException(
-                status_code=401,
-                detail="Token is not active or has been revoked",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            if not session_record:
+                SingletonLogger().get_logger().error(
+                    f"Token not found in login_session or inactive for user {user_id}"
+                )
+                raise HTTPException(
+                    status_code=401,
+                    detail="Token is not active or has been revoked",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+    except (DBAPIError, SQLAlchemyError) as db_err:
+        SingletonLogger().get_logger().exception(
+            f"Database connection error while validating token for user {user_id}: {db_err}"
+        )
+        raise DatabaseConnectionError(str(db_err))
 
     return int(user_id)
 
@@ -262,21 +269,27 @@ def token_required(func):
             )
 
         # Verify token exists in login_session and is active
-        async with session_pool() as session:
-            result = await session.execute(
-                select(LoginSession)
-                .filter_by(user_id=int(user_id), access_token=token, is_active=True)
-                .order_by(desc(LoginSession.created_at))
-            )
-            session_record = result.scalar_one_or_none()
-
-            if not session_record:
-                logger.error("Invalid or inactive access token.")
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid or inactive access token.",
-                    headers={"WWW-Authenticate": "Bearer"},
+        try:
+            async with session_pool() as session:
+                result = await session.execute(
+                    select(LoginSession)
+                    .filter_by(user_id=int(user_id), access_token=token, is_active=True)
+                    .order_by(desc(LoginSession.created_at))
                 )
+                session_record = result.scalar_one_or_none()
+
+                if not session_record:
+                    logger.error("Invalid or inactive access token.")
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid or inactive access token.",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+        except (DBAPIError, SQLAlchemyError) as db_err:
+            logger.exception(
+                f"Database connection error while checking token for user {user_id}: {db_err}"
+            )
+            raise DatabaseConnectionError(str(db_err))
 
         # Inject user_id into kwargs
         kwargs["user_id"] = int(user_id)

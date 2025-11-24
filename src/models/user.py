@@ -1,8 +1,9 @@
 from datetime import date
 from typing import TYPE_CHECKING, Optional, Union
-from sqlalchemy import CheckConstraint, String
+from sqlalchemy import CheckConstraint, String, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..database.database import Base, TimestampMixin
+from ..lib.enums import UserRole
 
 if TYPE_CHECKING:
     from .profile import Profile
@@ -10,6 +11,7 @@ if TYPE_CHECKING:
     from .model_memory import ModelMemory
     from .session import Session
     from .login_session import LoginSession
+    from .user_service_credential import UserServiceCredential
 
 
 class User(Base, TimestampMixin):
@@ -31,6 +33,9 @@ class User(Base, TimestampMixin):
     google_id: Mapped[str | None] = mapped_column(
         String(50), nullable=True, unique=True
     )
+    role: Mapped[UserRole] = mapped_column(
+        SQLEnum(UserRole), nullable=False, default=UserRole.USER
+    )
 
     # relationships
     profile: Mapped["Profile"] = relationship(
@@ -50,6 +55,9 @@ class User(Base, TimestampMixin):
     )
     login_sessions: Mapped[list["LoginSession"]] = relationship(
         "LoginSession", back_populates="user", cascade="all, delete-orphan"
+    )
+    service_credentials: Mapped[list["UserServiceCredential"]] = relationship(
+        "UserServiceCredential", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin Dashboard{% endblock %}</title>
+    <!-- Preconnect to Google Fonts and load Geist font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        /* Use Geist font across the admin dashboard */
+        html, body, input, textarea, select, button {
+            font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+        }
+
+        /* Ensure form controls inherit the font */
+        input, textarea, select, button {
+            font-family: inherit;
+        }
+
+        [x-cloak] { display: none !important; }
+        
+        /* Smooth transitions for dark mode */
+        * {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+        
+        /* Toast animations */
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
+        .toast-enter {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .toast-exit {
+            animation: slideOut 0.3s ease-in;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900">
+    <!-- Dark Mode Toggle -->
+    <button id="theme-toggle" class="fixed top-4 left-4 z-50 p-2 rounded-lg bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all">
+        <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5 text-gray-800 dark:text-gray-200" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+        </svg>
+        <svg id="theme-toggle-light-icon" class="hidden w-5 h-5 text-gray-800 dark:text-gray-200" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path>
+        </svg>
+    </button>
+    
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+    
+    {% block content %}{% endblock %}
+    
+    <script>
+        // Dark mode toggle
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+        
+        // Check for saved theme preference or default to light mode
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            themeToggleLightIcon.classList.remove('hidden');
+        } else {
+            document.documentElement.classList.remove('dark');
+            themeToggleDarkIcon.classList.remove('hidden');
+        }
+        
+        themeToggleBtn.addEventListener('click', function() {
+            // Toggle icons
+            themeToggleDarkIcon.classList.toggle('hidden');
+            themeToggleLightIcon.classList.toggle('hidden');
+            
+            // Toggle dark mode
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('color-theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('color-theme', 'dark');
+            }
+        });
+        
+        // Toast notification system
+        function showToast(message, type = 'error', duration = 5000) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const colors = {
+                error: 'bg-red-500',
+                success: 'bg-green-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            };
+            
+            const icons = {
+                error: `<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>`,
+                success: `<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>`,
+                warning: `<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>`,
+                info: `<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>`
+            };
+            
+            toast.className = `toast-enter flex items-center ${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg min-w-[300px] max-w-md`;
+            toast.innerHTML = `
+                <div class="flex-shrink-0">
+                    ${icons[type]}
+                </div>
+                <div class="ml-3 flex-1">
+                    <p class="text-sm font-medium">${message}</p>
+                </div>
+                <button onclick="this.parentElement.remove()" class="ml-3 flex-shrink-0">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Auto remove after duration
+            setTimeout(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+        
+        // Listen for HTMX events to show toasts
+        document.body.addEventListener('htmx:responseError', function(evt) {
+            const xhr = evt.detail.xhr;
+            let message = 'An error occurred';
+            
+            // Try to parse FastAPI error response
+            try {
+                const response = JSON.parse(xhr.responseText);
+                message = response.detail || message;
+            } catch (e) {
+                // Fallback to generic messages if JSON parsing fails
+                const status = xhr.status;
+                if (status === 400) {
+                    message = 'Invalid request. Please check your input.';
+                } else if (status === 401) {
+                    message = 'Invalid credentials. Please try again.';
+                } else if (status === 403) {
+                    message = 'Access denied. Admin privileges required.';
+                } else if (status === 404) {
+                    message = 'Resource not found.';
+                } else if (status === 422) {
+                    message = 'Validation failed. Please check your input.';
+                } else if (status >= 500) {
+                    message = 'Server error. Please try again later.';
+                }
+            }
+            
+            showToast(message, 'error');
+        });
+        
+        document.body.addEventListener('htmx:sendError', function(evt) {
+            showToast('Network error. Please check your connection.', 'error');
+        });
+    </script>
+</body>
+</html>

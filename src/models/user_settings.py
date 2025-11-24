@@ -22,8 +22,12 @@ class UserSettings(Base, TimestampMixin):
 
     if TYPE_CHECKING:
         from .user import User  # pragma: no cover
+        from .user_service_credential import UserServiceCredential  # pragma: no cover
 
     user: Mapped["User"] = relationship("User", back_populates="user_settings")
+    service_credentials: Mapped[list["UserServiceCredential"]] = relationship(
+        "UserServiceCredential", back_populates="settings", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"UserSettings(id={self.id}, user_id={self.user_id}, language={self.language_preference})"

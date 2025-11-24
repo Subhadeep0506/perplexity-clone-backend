@@ -1,0 +1,37 @@
+from enum import Enum
+
+
+class UserRole(Enum):
+    USER = "user"
+    ADMIN = "admin"
+
+
+class WebSearcher(Enum):
+    TAVILY = "tavily"
+    GOOGLE = "google"
+    EXA = "exa"
+    SERP = "serp"
+    DUCKDUCKGO = "duckduckgo"
+
+
+class WebScraper(Enum):
+    SCRAPEDO = "scrapedo"
+    FIRECRAWL = "firecrawl"
+    CRAWL4AI = "crawl4ai"
+    SCRAPER = "scraper"
+
+
+class LLMProvider(Enum):
+    GEMINI = "gemini"
+    MISTRAL = "mistral"
+    GROQ = "groq"
+    COHERE = "cohere"
+    NIM = "nim"
+    OPENROUTER = "openrouter"
+    OPENAI = "openai"
+    ANTHROPIC = "anthropic"
+
+
+class SourceType(Enum):
+    WEB = "web"
+    FILE = "file"
