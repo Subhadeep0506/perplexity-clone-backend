@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from .session import Session
     from .login_session import LoginSession
     from .user_service_credential import UserServiceCredential
+    from .user_api_keys import UserAPIKeys
 
 
 class User(Base, TimestampMixin):
@@ -58,6 +59,9 @@ class User(Base, TimestampMixin):
     )
     service_credentials: Mapped[list["UserServiceCredential"]] = relationship(
         "UserServiceCredential", back_populates="user", cascade="all, delete-orphan"
+    )
+    api_keys: Mapped[list["UserAPIKeys"]] = relationship(
+        "UserAPIKeys", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

@@ -18,7 +18,11 @@ class UserServiceCredential(Base, TimestampMixin):
     service_id: Mapped[int] = mapped_column(
         ForeignKey("service_catalog.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    api_key: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    # Foreign key to UserAPIKeys table
+    api_key_id: Mapped[int] = mapped_column(
+        ForeignKey("user_api_keys.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # Optional service-specific configuration
     config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     is_default: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="false"
@@ -28,10 +32,12 @@ class UserServiceCredential(Base, TimestampMixin):
         from .user import User  # pragma: no cover
         from .user_settings import UserSettings  # pragma: no cover
         from .service_catalog import ServiceCatalog  # pragma: no cover
+        from .user_api_keys import UserAPIKeys  # pragma: no cover
 
     user = relationship("User", back_populates="service_credentials")
     settings = relationship("UserSettings", back_populates="service_credentials")
     service = relationship("ServiceCatalog", back_populates="credentials")
+    api_key = relationship("UserAPIKeys", back_populates="service_credentials")
 
     def __repr__(self) -> str:
-        return f"UserServiceCredential(id={self.id}, user_id={self.user_id}, service_id={self.service_id})"
+        return f"UserServiceCredential(id={self.id}, user_id={self.user_id}, service_id={self.service_id}, api_key_id={self.api_key_id})"

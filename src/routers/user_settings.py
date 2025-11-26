@@ -19,6 +19,7 @@ from ..schemas.user_service_credential import (
     UserServiceCredentialUpdate,
     UserServiceCredentialBulkUpdate,
     UserServiceCredentialResponse,
+    UserServiceCredentialListResponse,
 )
 from ..lib.auth import get_current_user
 
@@ -52,7 +53,7 @@ async def update_user_settings_endpoint(
 ###############################
 
 
-@router.get("/credentials", response_model=list[UserServiceCredentialResponse])
+@router.get("/credentials", response_model=UserServiceCredentialListResponse)
 async def read_user_service_credentials(user_id: int = Depends(get_current_user)):
     """Get all service credentials for current user"""
     return await get_user_service_credentials(user_id)

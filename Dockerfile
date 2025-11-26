@@ -7,4 +7,5 @@ RUN sudo apt-get update && sudo apt-get install -y build-essential && \
 RUN uv install --no-cache-dir --no-dev
 RUN crawl4ai-setup
 EXPOSE 8089
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8089"]
+# Run with multiple workers for better concurrency
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8089", "--workers", "4"]

@@ -39,3 +39,10 @@ class ServiceCatalogResponse(ServiceCatalogBase):
 
     class Config:
         from_attributes = True
+
+
+class ServiceCatalogListResponse(BaseModel):
+    services: list[ServiceCatalogResponse]
+
+    class Config:
+        from_attributes = True

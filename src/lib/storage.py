@@ -1,6 +1,7 @@
 import boto3
 import os
 import requests
+import asyncio
 from typing import Optional
 from botocore.exceptions import NoCredentialsError, ClientError
 from fastapi import UploadFile, HTTPException
@@ -120,8 +121,9 @@ class SupabaseStorage:
             # Read file content
             file_content = await file.read()
 
-            # Upload to Supabase Storage
-            self.s3_client.put_object(
+            # Upload to Supabase Storage (wrap blocking boto3 call)
+            await asyncio.to_thread(
+                self.s3_client.put_object,
                 Bucket=self.bucket_name,
                 Key=key,
                 Body=file_content,
@@ -157,7 +159,9 @@ class SupabaseStorage:
     async def delete_file(self, file_key: str) -> bool:
         """Delete file from Supabase Storage"""
         try:
-            self.s3_client.delete_object(Bucket=self.bucket_name, Key=file_key)
+            await asyncio.to_thread(
+                self.s3_client.delete_object, Bucket=self.bucket_name, Key=file_key
+            )
             return True
         except ClientError as e:
             SingletonLogger().get_logger().error(

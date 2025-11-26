@@ -16,7 +16,7 @@ _MAP = {
 }
 
 
-def create_crawler(provider: str | WebScraper, **kwargs: Any):
+def create_scraper(provider: str | WebScraper, **kwargs: Any):
     if isinstance(provider, WebScraper):
         key = provider.value
     else:
@@ -24,6 +24,6 @@ def create_crawler(provider: str | WebScraper, **kwargs: Any):
 
     cls = _MAP.get(key)
     if not cls:
-        raise ValueError(f"Unknown crawler provider: {provider}")
+        raise ValueError(f"Unknown scraper provider: {provider}")
 
     return cls(**kwargs)

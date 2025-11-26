@@ -28,13 +28,22 @@ class LLMProvider(Enum):
     COHERE = "cohere"
     NIM = "nim"
     OPENROUTER = "openrouter"
-    OPENAI = "openai"
     ANTHROPIC = "anthropic"
 
 
 class EmbeddingProvider(Enum):
     HUGGINGFACE_LOCAL = "huggingface_local"
     HUGGINGFACE_ENDPOINT = "huggingface_endpoint"
+
+
+class CheckpointProvider(Enum):
+    REDIS = "redis"
+    POSTGRES = "postgres"
+
+
+class MemoryProvider(Enum):
+    REDIS = "redis"
+    POSTGRES = "postgres"
 
 
 class SourceType(Enum):

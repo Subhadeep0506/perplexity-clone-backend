@@ -97,7 +97,7 @@ def create_refresh_token(
     encoded_jwt = jwt.encode(
         to_encode, os.getenv("JWT_SECRET_KEY"), os.getenv("JWT_ALGORITHM")
     )
-    return encoded_jwt
+    return encoded_jwt, expires_delta_time
 
 
 class JWTBearer(HTTPBearer):

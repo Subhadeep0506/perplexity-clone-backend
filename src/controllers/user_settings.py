@@ -15,6 +15,7 @@ from ..schemas.user_service_credential import (
     UserServiceCredentialUpdate,
     UserServiceCredentialBulkUpdate,
     UserServiceCredentialResponse,
+    UserServiceCredentialListResponse,
 )
 from ..services.logger import SingletonLogger
 
@@ -139,7 +140,7 @@ async def update_user_settings(
 
 async def get_user_service_credentials(
     user_id: int,
-) -> list[UserServiceCredentialResponse]:
+) -> UserServiceCredentialListResponse:
     """Get all service credentials for a user"""
     try:
         async with session_pool() as session:
@@ -149,7 +150,7 @@ async def get_user_service_credentials(
             )
             settings = settings_result.scalar_one_or_none()
             if not settings:
-                return []
+                return UserServiceCredentialListResponse(credentials=[])
 
             result = await session.execute(
                 select(UserServiceCredential).where(
@@ -157,10 +158,11 @@ async def get_user_service_credentials(
                 )
             )
             credentials = result.scalars().all()
-            return [
+            cred_list = [
                 UserServiceCredentialResponse.model_validate(cred)
                 for cred in credentials
             ]
+            return UserServiceCredentialListResponse(credentials=cred_list)
     except DBAPIError as e:
         logger.exception(
             f"Database connection error fetching credentials for user_id={user_id}: {str(e)}"
@@ -219,7 +221,11 @@ async def get_user_service_credential(
 async def save_user_service_credentials(
     user_id: int, credentials_data: list[UserServiceCredentialCreate]
 ) -> list[UserServiceCredentialResponse]:
-    """Create or update multiple service credentials at once"""
+    """
+    Create or update multiple service credentials at once.
+    Note: This function expects api_key_id to be provided in credentials_data.
+    Use the user_api_keys controller to create API keys first.
+    """
     try:
         async with session_pool() as session:
             # Get or create user settings
@@ -232,6 +238,25 @@ async def save_user_service_credentials(
                 session.add(settings)
                 await session.flush()
 
+            # Validate that the API keys exist and belong to the user
+            from ..models.user_api_keys import UserAPIKeys
+
+            api_key_ids = {cred.api_key_id for cred in credentials_data}
+            api_keys_result = await session.execute(
+                select(UserAPIKeys).where(
+                    UserAPIKeys.id.in_(api_key_ids),
+                    UserAPIKeys.user_id == user_id,
+                    UserAPIKeys.is_active == True,
+                )
+            )
+            valid_api_keys = {key.id for key in api_keys_result.scalars().all()}
+            invalid_api_key_ids = api_key_ids - valid_api_keys
+            if invalid_api_key_ids:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid or inactive API key IDs: {invalid_api_key_ids}",
+                )
+
             # Get all existing credentials for this user
             existing_result = await session.execute(
                 select(UserServiceCredential).where(
@@ -239,18 +264,24 @@ async def save_user_service_credentials(
                 )
             )
             existing_credentials = {
-                cred.service_id: cred for cred in existing_result.scalars().all()
+                (cred.service_id, cred.api_key_id): cred
+                for cred in existing_result.scalars().all()
             }
 
             saved_credentials = []
             for cred_data in credentials_data:
-                if cred_data.service_id in existing_credentials:
+                key = (cred_data.service_id, cred_data.api_key_id)
+                if key in existing_credentials:
                     # Update existing
-                    credential = existing_credentials[cred_data.service_id]
+                    credential = existing_credentials[key]
                     for field, value in cred_data.model_dump(
                         exclude_unset=True
                     ).items():
-                        setattr(credential, field, value)
+                        if field not in [
+                            "service_id",
+                            "api_key_id",
+                        ]:  # Don't update keys
+                            setattr(credential, field, value)
                 else:
                     # Create new
                     credential = UserServiceCredential(
@@ -269,6 +300,8 @@ async def save_user_service_credentials(
                 UserServiceCredentialResponse.model_validate(cred)
                 for cred in saved_credentials
             ]
+    except HTTPException:
+        raise
     except DBAPIError as e:
         logger.exception(
             f"Database connection error saving credentials for user_id={user_id}: {str(e)}"
@@ -278,11 +311,13 @@ async def save_user_service_credentials(
         logger.error(
             f"Database error saving credentials for user_id={user_id}: {str(e)}"
         )
+        await session.rollback()
         raise HTTPException(status_code=500, detail="Failed to save credentials")
     except Exception as e:
         logger.error(
             f"Unexpected error saving credentials for user_id={user_id}: {str(e)}"
         )
+        await session.rollback()
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

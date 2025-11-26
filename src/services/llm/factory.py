@@ -52,9 +52,9 @@ def create_llm(
     *,
     model: str | None = None,
     api_key: str | None = None,
-    temperature: float | None = None,
-    max_tokens: int | None = None,
-    streaming: bool | None = None,
+    temperature: float | None = 0.5,
+    max_tokens: int | None = 1024,
+    streaming: bool | None = False,
     base_url: str | None = None,
     **kwargs: Any,
 ):
@@ -109,7 +109,7 @@ def create_llm(
             )
         return _ChatMistral(**common, **kwargs)
 
-    if key in (LLMProvider.NIM.value, LLMProvider.OPENAI.value):
+    if key in (LLMProvider.NIM.value, LLMProvider.OPENROUTER.value):
         if _ChatOpenAI is None:
             raise ImportError(
                 "LangChain OpenAI adapter not installed; install 'langchain_openai'"

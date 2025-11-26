@@ -1,67 +1,79 @@
-from langchain_cohere import ChatCohere
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_groq import ChatGroq
-from langchain_mistralai import ChatMistralAI
-from langchain_openai import ChatOpenAI
-from langchain_anthropic import ChatAnthropic
-import os
+import os, sys
 
-cohere_model = ChatCohere(
-    model="command-a-03-2025",
-    cohere_api_key="",
-    temperature=0.7,
-    max_tokens=1024,
-    streaming=False,
+cwd = os.getcwd()
+project_root = cwd
+if os.path.basename(cwd) == "tests":
+    project_root = os.path.dirname(cwd)
+elif os.path.exists(os.path.join(cwd, "src")):
+    project_root = cwd
+else:
+    curr = cwd
+    while curr and curr != os.path.dirname(curr):
+        if os.path.exists(os.path.join(curr, "src")):
+            project_root = curr
+            break
+        curr = os.path.dirname(curr)
+sys.path.append(project_root)
+
+from dotenv import load_dotenv
+
+_ = load_dotenv(os.path.join(project_root, ".env"))
+
+from src.services.llm.factory import create_llm
+from src.services.web_scraper.factory import create_scraper
+from src.services.web_search.factory import create_web_search
+from src.services.memory.factory import create_memory, create_checkpointer
+from src.services.vector_store.factory import create_vector_store
+from src.services.embedding.factory import create_embeddings
+from src.lib.enums import *
+
+llm = create_llm(
+    provider=LLMProvider.COHERE.value,
+    model="command-a-03-2025", #"command-a-reasoning-08-2025",
+    api_key=os.getenv("COHERE_API_KEY"),
 )
-
-nim_model = ChatOpenAI(
-    model="qwen/qwen3-next-80b-a3b-thinking",
-    api_key="nvapi-",
-    base_url="https://integrate.api.nvidia.com/v1",
-    temperature=0.7,
-    max_tokens=1024,
-    streaming=False,
+searcher = create_web_search(
+    provider=WebSearcher.GOOGLE.value,
 )
-
-mistral_model = ChatMistralAI(
-    model="mistral-medium-2508",
-    mistral_api_key="",
-    temperature=0.7,
-    max_tokens=1024,
-    streaming=False,
+scraper = create_scraper(
+    provider=WebScraper.CRAWL4AI.value,
 )
-
-groq_model = ChatGroq(
-    model="qwen/qwen3-32b",
-    api_key="",
-    temperature=0.7,
-    max_tokens=1024,
-    streaming=False,
+embeddding = create_embeddings(
+    provider=EmbeddingProvider.HUGGINGFACE_ENDPOINT.value,
+    api_key=os.getenv("HF_API_KEY"),
 )
+vectorstore = create_vector_store(embeddings=embeddding)
 
-gemini_model = ChatGoogleGenerativeAI(
-    model="gemini-flash-latest",
-    google_api_key="",
-    temperature=0.7,
-    max_tokens=1024,
-    streaming=False,
-)
+# store = create_memory(
+#     provider=MemoryProvider.POSTGRES.value, conn_string=os.getenv("MEMORY_DATABASE_URL")
+# )
+# checkpointer = create_checkpointer(
+#     provider=MemoryProvider.REDIS.value,
+# )
 
-openrouter_model = ChatOpenAI(
-    model="openai/gpt-oss-20b",
-    api_key="",
-    base_url="https://openrouter.ai/api/v1",
-    temperature=0.7,
-    max_tokens=1024,
-    streaming=False,
-)
+async def main():
+    # urls = await searcher.arun("What are the new features of langchain v1?")
+    # scrapes = await scraper.aload(urls=[res["url"] for res in urls[:3]])
 
-claude_model = ChatAnthropic(
-    model="claude-haiku-4-5-20251001",
-    anthropic_api_key="",
-    temperature=0.7,
-    max_tokens=1024,
-    streaming=False,
-)
+    # print("Search Results:", scrapes)
+    respo = llm.stream("Explain the theory of relativity in simple terms.")
+    for chunk in respo:
+        print(chunk.content, end="", flush=True)
 
-print(model.invoke("Hi, can you answer meddical queries?"))
+
+import asyncio
+
+asyncio.run(main())
+
+# from langchain_cohere import ChatCohere
+# import os
+# from dotenv import load_dotenv
+
+# _ = load_dotenv(".env")
+
+# llm = ChatCohere(
+#     model="command-a-reasoning-08-2025",
+#     api_key=os.getenv("COHERE_API_KEY"),
+# )
+# resp = llm.invoke("Explain the theory of relativity in simple terms.")
+# print(resp)

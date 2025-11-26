@@ -13,11 +13,14 @@ from src.database.database import engine, Base, DatabaseConnectionError
 
 from src.services.app_state import AppState
 from src.services.logger import SingletonLogger
+from src.core.settings import get_settings
+from src.core.container import ServiceContainer, initialize_registry
 from typing import Optional
 from src.routers.auth import router
 from src.routers.profile import router as profile_router
 from src.routers.user_settings import router as user_settings_router
 from src.routers.service_catalog import router as service_catalog_router
+from src.routers.user_api_keys import router as user_api_keys_router
 from src.routers.admin import router as admin_router
 
 from src.models import (
@@ -33,6 +36,7 @@ from src.models import (
     login_session,
     service_catalog,
     user_service_credential,
+    user_api_keys,
 )
 
 
@@ -40,9 +44,18 @@ from src.models import (
 async def lifespan(app: FastAPI):
     """Lifespan handler to initialize app state, create DB tables and shutdown cleanup."""
     logger = SingletonLogger().get_logger()
+
+    # Initialize settings and service container
+    settings = get_settings()
+    container = ServiceContainer(settings)
+    registry = initialize_registry(settings)
+
     model = None
     tokenizer = None
     app.state = AppState(model=model, tokenizer=tokenizer, logger=logger)
+    app.state.settings = settings
+    app.state.container = container
+    app.state.registry = registry
 
     try:
         async with engine.begin() as conn:
@@ -112,6 +125,9 @@ app.include_router(
 app.include_router(
     service_catalog_router, prefix="/api/v1/service-catalog", tags=["Service Catalog"]
 )
+app.include_router(
+    user_api_keys_router, prefix="/api/v1/user-api-keys", tags=["User API Keys"]
+)
 app.include_router(admin_router, prefix="/admin", tags=["Admin"])
 
 
@@ -122,7 +138,7 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    cpu_usage: Optional[float] = psutil.cpu_percent(interval=1)
+    cpu_usage: Optional[float] = psutil.cpu_percent(interval=None)  # Non-blocking
     memory_usage: Optional[float] = psutil.virtual_memory().percent
     num_threads: Optional[int] = psutil.cpu_count()
 

@@ -7,21 +7,23 @@ from ..schemas.service_catalog import (
     ServiceCatalogCreate,
     ServiceCatalogBulkUpdate,
     ServiceCatalogResponse,
+    ServiceCatalogListResponse,
 )
 from ..services.logger import SingletonLogger
 
 logger = SingletonLogger().get_logger()
 
 
-async def get_all_service_catalogs() -> list[ServiceCatalogResponse]:
+async def get_all_service_catalogs() -> ServiceCatalogListResponse:
     """Get all service catalogs"""
     try:
         async with session_pool() as session:
             result = await session.execute(select(ServiceCatalog))
             catalogs = result.scalars().all()
-            return [
+            services = [
                 ServiceCatalogResponse.model_validate(catalog) for catalog in catalogs
             ]
+            return ServiceCatalogListResponse(services=services)
     except DBAPIError as e:
         logger.exception(
             f"Database connection error fetching service catalogs: {str(e)}"

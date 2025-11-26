@@ -10,13 +10,14 @@ from ..schemas.service_catalog import (
     ServiceCatalogCreate,
     ServiceCatalogBulkUpdate,
     ServiceCatalogResponse,
+    ServiceCatalogListResponse,
 )
 from ..lib.auth import get_current_user
 
 router = APIRouter()
 
 
-@router.get("/", response_model=list[ServiceCatalogResponse])
+@router.get("/", response_model=ServiceCatalogListResponse)
 async def read_all_service_catalogs(user_id: int = Depends(get_current_user)):
     """Get all service catalogs"""
     return await get_all_service_catalogs()
