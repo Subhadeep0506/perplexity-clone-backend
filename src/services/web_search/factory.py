@@ -20,7 +20,11 @@ _MAP = {
 
 def create_web_search(provider: str | WebSearcher, **kwargs: Any):
     """Create a web search implementation by provider name or enum.
-
+    ```python
+    searcher = create_web_search(provider='google', api_key='your_api_key')
+    results = await searcher.arun(query='What is the capital of France?')
+    # results = [{title: "...", "link": "...", "snippet": "..."}, ...]
+    ```
     Args:
         provider: `WebSearcher` enum or string value (e.g. 'google', 'exa').
         kwargs: Passed to the implementation constructor.

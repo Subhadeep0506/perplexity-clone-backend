@@ -15,7 +15,16 @@ from src.core.state.agent_state import AgentState
 from src.core.tools.retriever_tool import retriever_tool
 
 
-def create_agent_graph():
+def create_agent_graph(
+    user_id: str = "default",
+    session_id: str = "default",
+    llm_provider: str = "default",
+    vectorstore_provider: str = "default",
+    embeddings_provider: str = "default",
+    web_search_provider: str = "default",
+    web_scraper_provider: str = "default",
+    query: str = "",
+):
     """Create a LangGraph agent with retriever tool.
 
     The agent graph includes:
@@ -26,64 +35,6 @@ def create_agent_graph():
     Returns:
         Compiled StateGraph ready for execution
     """
-
-    # Define the agent node
-    async def agent_node(state: AgentState) -> AgentState:
-        """Agent node that processes messages and decides on tool usage.
-
-        This node:
-        1. Gets the LLM from state (user-specific)
-        2. Binds tools to the LLM
-        3. Invokes the LLM with conversation history
-        4. Returns updated state with LLM response
-        """
-        llm = state.get("llm")
-
-        if not llm:
-            # Fallback error message if LLM is not initialized
-            return {
-                "messages": [
-                    AIMessage(
-                        content="Error: No LLM available. Please initialize an LLM in the state."
-                    )
-                ]
-            }
-
-        # Get the conversation messages
-        messages = state.get("messages", [])
-
-        # Bind tools to the LLM - pass the tool directly
-        # LangChain will handle the conversion based on the LLM provider
-        llm_with_tools = llm.bind_tools([retriever_tool])
-
-        # Invoke the LLM
-        response = await llm_with_tools.ainvoke(messages)
-
-        # Return updated state with the LLM's response
-        return {"messages": [response]}
-
-    def should_continue(state: AgentState) -> Literal["tools", "end"]:
-        """Determine whether to continue to tools or end.
-
-        Args:
-            state: Current agent state
-
-        Returns:
-            "tools" if the last message has tool calls, "end" otherwise
-        """
-        messages = state.get("messages", [])
-        last_message = messages[-1] if messages else None
-
-        # If the last message has tool calls, route to tools
-        if (
-            last_message
-            and hasattr(last_message, "tool_calls")
-            and last_message.tool_calls
-        ):
-            return "tools"
-
-        # Otherwise, end the conversation
-        return "end"
 
     # Create the graph
     workflow = StateGraph(AgentState)

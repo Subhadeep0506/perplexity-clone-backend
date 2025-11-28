@@ -17,6 +17,16 @@ _MAP = {
 
 
 def create_scraper(provider: str | WebScraper, **kwargs: Any):
+    """Create a web scraper implementation by provider name or enum.
+    ```python
+    scraper = create_scraper(provider='scrapedo', api_key='your_api_key')
+    results = await scraper.aload(url='https://example.com')
+    # results = [Document(page_content='...', metadata={...}), ...]
+    ```
+    Returns:
+        Instance of a `BaseWebScraper` implementation.
+
+    """
     if isinstance(provider, WebScraper):
         key = provider.value
     else:

@@ -1,3 +1,4 @@
+import os
 from __future__ import annotations
 
 from typing import Any
@@ -114,6 +115,10 @@ def create_llm(
             raise ImportError(
                 "LangChain OpenAI adapter not installed; install 'langchain_openai'"
             )
+        if key == LLMProvider.NIM.value:
+            kwargs["base_url"] = os.getenv("NIM_BASE_URL", "")
+        if key == LLMProvider.OPENROUTER.value:
+            kwargs["base_url"] = os.getenv("OPENROUTER_BASE_URL", "")
         return _ChatOpenAI(**common, **kwargs)
 
     if key == LLMProvider.ANTHROPIC.value:
