@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     pinecone_metric: str = "cosine"
     pinecone_uri: Optional[str] = None
 
+    # Optional external service base URLs and API keys used by third-party libs
+    openrouter_base_url: Optional[str] = None
+    nim_base_url: Optional[str] = None
+    langsmith_api_key: Optional[str] = None
+
     # Web Search
     web_search_provider: str = WebSearcher.DUCKDUCKGO.value
     google_cse_id: Optional[str] = None  # System-level config
@@ -86,7 +91,7 @@ class Settings(BaseSettings):
     upstash_redis_rest_token: Optional[str] = None
 
     # JWT & Auth
-    jwt_secret_key: str = "your-secret-key-change-in-production"
+    jwt_secret_key: str = os.getenv("JWT_SECRET_KEY")
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 60
     jwt_refresh_token_expire_minutes: int = 10080  # 7 days
@@ -116,6 +121,7 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
+        extra = "allow"
 
 
 # Global settings instance
